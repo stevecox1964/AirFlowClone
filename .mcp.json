@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "airflowclone": {
+      "type": "stdio",
+      "command": "C:\\Users\\user\\Desktop\\React\\AirFlowClone\\backend\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "airflowclone.mcp_server"],
+      "env": {
+        "PYTHONPATH": "C:\\Users\\user\\Desktop\\React\\AirFlowClone\\backend",
+        "AFC_API_URL": "http://127.0.0.1:8000"
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+backend/.venv/
+backend/*.egg-info/
+backend/**/*.egg-info/
+
+# --- Node / frontend ---
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+
+# --- Runtime artifacts (not source) ---
+airflowclone.db
+runs/
+
+# --- Editor / OS ---
+.DS_Store
+.vscode/
+.idea/

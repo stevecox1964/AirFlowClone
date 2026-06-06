@@ -1,0 +1,23 @@
+[project]
+name = "airflowclone"
+version = "0.1.0"
+description = "Modern Airflow-style DAG engine — local, single-machine, file-on-disk DAGs"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy>=2.0",
+    "pydantic>=2.9",
+    "watchdog>=5.0",
+    "apscheduler>=3.10",
+    "mcp>=1.0",
+    "httpx>=0.27",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["airflowclone*"]
