@@ -433,6 +433,32 @@ def create_app() -> FastAPI:
                 finished_at=_iso(run.finished_at),
             )
 
+    @app.get("/api/runs", response_model=list[RunSummary])
+    def list_all_runs(
+        status: Optional[str] = None, limit: int = 50
+    ) -> list[RunSummary]:
+        """Recent runs across every DAG, newest first. The entry point for a session
+        that's been away: see what's running/finished without knowing a dag_id or run_id.
+        Optional `status` filter (e.g. running, success, failed); `limit` caps results."""
+        limit = max(1, min(limit, 500))
+        with SessionLocal() as session:
+            stmt = select(DagRun).order_by(desc(DagRun.started_at))
+            if status:
+                stmt = stmt.where(DagRun.status == status)
+            rows = session.execute(stmt.limit(limit)).scalars().all()
+            return [
+                RunSummary(
+                    id=r.id,
+                    dag_id=r.dag_id,
+                    status=r.status,
+                    trigger_type=r.trigger_type,
+                    params=json.loads(r.params_json or "{}"),
+                    started_at=_iso(r.started_at),
+                    finished_at=_iso(r.finished_at),
+                )
+                for r in rows
+            ]
+
     @app.get("/api/runs/{run_id}", response_model=RunDetail)
     def get_run(run_id: str) -> RunDetail:
         with SessionLocal() as session:

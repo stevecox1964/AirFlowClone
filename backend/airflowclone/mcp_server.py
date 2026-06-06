@@ -26,6 +26,7 @@ before composing new ones.
 from __future__ import annotations
 
 import os
+import time
 from typing import Any, Optional
 
 import httpx
@@ -115,15 +116,57 @@ def get_dag(dag_id: str) -> dict:
 
 
 @mcp.tool()
+def recent_runs(limit: int = 20, status: Optional[str] = None) -> list[dict]:
+    """Recent runs across ALL DAGs, newest first — the entry point when you've been away
+    (e.g. the engine kept running after CC was closed). Use this to discover what ran and
+    its outcome without already knowing a dag_id or run_id, then drill in with get_run /
+    get_task_output. Optional `status` filter: running, success, failed, pending."""
+    params: dict[str, Any] = {"limit": limit}
+    if status:
+        params["status"] = status
+    return _req("GET", "/api/runs", params=params)
+
+
+@mcp.tool()
 def list_runs(dag_id: str) -> list[dict]:
-    """Run history for a DAG (newest first): status, trigger type, params used, times."""
+    """Run history for ONE DAG (newest first): status, trigger type, params used, times.
+    For runs across the whole library, use recent_runs."""
     return _req("GET", f"/api/dags/{dag_id}/runs")
 
 
 @mcp.tool()
 def get_run(run_id: str) -> dict:
-    """A run's status plus per-task status/attempt/error. Poll this after trigger_run."""
+    """A run's status plus per-task status/attempt/error. For a single status check.
+    To wait for completion instead of polling yourself, use wait_for_run."""
     return _req("GET", f"/api/runs/{run_id}")
+
+
+@mcp.tool()
+def wait_for_run(
+    run_id: str, timeout_seconds: float = 30.0, poll_interval: float = 1.5
+) -> dict:
+    """Block until a run finishes, then return it — the "callback" for chat. After
+    trigger_run, call wait_for_run(run_id) instead of polling get_run in a loop.
+
+    Returns the same shape as get_run, plus a `waited` flag:
+      * waited=true  -> the run reached a terminal status (success/failed); you're done.
+      * waited=false -> the timeout elapsed and the run is still pending/running. The
+        run keeps executing in the engine — just call wait_for_run(run_id) again.
+    timeout_seconds is capped at 55s so the tool call returns before the MCP client's
+    own timeout; raise it toward that cap for long jobs, or call again to keep waiting."""
+    timeout_seconds = max(1.0, min(float(timeout_seconds), 55.0))
+    poll_interval = max(0.25, min(float(poll_interval), 10.0))
+    terminal = {"success", "failed"}
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        run = _req("GET", f"/api/runs/{run_id}")
+        if run.get("status") in terminal:
+            run["waited"] = True
+            return run
+        if time.monotonic() >= deadline:
+            run["waited"] = False
+            return run
+        time.sleep(poll_interval)
 
 
 @mcp.tool()
